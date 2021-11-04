@@ -1,0 +1,37 @@
+
+- name: collect network device's logs
+  hosts: all
+  strategy: linear
+  
+  vars:
+    log_regular_expression: "\\*{{'%b' | strftime}}.*"
+  
+  tasks:
+    - name: prepare directory to store log files
+      file:
+        path: files/{{"%Y%m%d" | strftime}}
+        state: directory
+      when: not ("files/{{"%Y%m%d" | strftime}}" is exists)
+      delegate_to: localhost
+      tags:
+        - always
+      
+    - name: collect network device's logs
+      ios_command:
+        commands: show logging
+      register: network_logs_results
+      when: (inventory_hostname is in(groups.network_switch_group))
+      tags:
+        - collect_network_logs
+      
+    # "{{network_logs_results.stdout.0 | regex_replace(':\s', ',') | regex_findall(log_regular_expression)}}"
+    
+    - name: copy network logs into report files
+      template:
+        src: templates/collect_network_logs.j2
+        dest: files/{{"%Y%m%d" | strftime}}/{{inventory_hostname}}.csv
+      when: (inventory_hostname is in(groups.network_switch_group))
+      delegate_to: localhost
+      tags:
+        - collect_network_logs
+        

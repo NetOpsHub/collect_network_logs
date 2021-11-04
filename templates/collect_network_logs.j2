@@ -1,0 +1,3 @@
+{% for line in network_logs_results.stdout.0 | regex_replace(':\s', ',') | regex_findall(log_regular_expression) %}
+{{line}}
+{% endfor %}
